@@ -9,7 +9,13 @@
 
   <artifactId>URLSCM</artifactId>
   <packaging>hpi</packaging>
-  <version>1.2-SNAPSHOT</version>
+  <version>1.2</version>
   <name>URL SCM plugin</name>
   <description>Allows specification of URLs to poll and copy into the workspace</description>
+
+  <scm>
+    <connection>scm:svn:https://guest@svn.dev.java.net/svn/hudson/tags/URLSCM-1.2</connection>
+    <developerConnection>scm:svn:https://svn.dev.java.net/svn/hudson/tags/URLSCM-1.2</developerConnection>
+    <url>https://hudson.dev.java.net/source/browse/hudson/hudson/plugins/URLSCM/tags/URLSCM-1.2</url>
+  </scm>
 </project>
