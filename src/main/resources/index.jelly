@@ -1,4 +1,0 @@
-<div>
-  A URL SCM plugin for Hudson.  This plugin supports polling and checkout.  Polling is done by checking the
-  last-modified header returned when connecting to a URL.  Checkout is done by copying the URL data into the workspace.
-</div>
