@@ -37,7 +37,7 @@
 
   <artifactId>URLSCM</artifactId>
   <packaging>hpi</packaging>
-  <version>1.6-SNAPSHOT</version>
+  <version>1.6</version>
 
   <name>URL SCM plugin</name>
   <description>Allows specification of URLs to poll and copy into the workspace</description>
