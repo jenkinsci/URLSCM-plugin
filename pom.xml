@@ -3,7 +3,7 @@
   <parent>
     <groupId>org.jvnet.hudson.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.318</version>
+    <version>1.392</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -12,7 +12,7 @@
   <version>1.6-SNAPSHOT</version>
   <name>URL SCM plugin</name>
   <description>Allows specification of URLs to poll and copy into the workspace</description>
-  <url>http://wiki.hudson-ci.org/display/HUDSON/URL+SCM</url>
+  <url>http://wiki.jenkins-ci.org/display/JENKINS/URL+SCM</url>
   <developers>
     <developer>
       <id>mdonohue</id>

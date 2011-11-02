@@ -1,19 +1,21 @@
 package hudson.plugins.URLSCM;
 
-import hudson.Extension;
 import static hudson.Util.fixEmpty;
+import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
 import hudson.model.Hudson;
 import hudson.model.Run;
-import hudson.model.TaskListener;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.NullChangeLogParser;
-import hudson.scm.SCM;
+import hudson.scm.PollingResult;
 import hudson.scm.SCMDescriptor;
+import hudson.scm.SCMRevisionState;
+import hudson.scm.SCM;
 import hudson.util.FormValidation;
 
 import java.io.File;
@@ -28,18 +30,20 @@ import java.util.Date;
 import javax.servlet.ServletException;
 
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 public class URLSCM extends hudson.scm.SCM {
     private final ArrayList<URLTuple> urls = new ArrayList<URLTuple>();
-    private final boolean clearWorkspace;
 
-    public URLSCM(String[] u, boolean clear) {
-        for(int i = 0; i < u.length; i++) {
-            urls.add(new URLTuple(u[i]));
+    private final boolean             clearWorkspace;
+
+    public URLSCM(final String[] u, final boolean clear) {
+        for (final String element : u) {
+            urls.add(new URLTuple(element));
         }
-        this.clearWorkspace = clear;
+        clearWorkspace = clear;
     }
 
     public URLTuple[] getUrls() {
@@ -51,43 +55,50 @@ public class URLSCM extends hudson.scm.SCM {
     }
 
     @Override
-    public boolean checkout(AbstractBuild build, Launcher launcher,
-            FilePath workspace, BuildListener listener, File changelogFile)
-    throws IOException, InterruptedException {
-        if(clearWorkspace) {
+    public boolean checkout(final AbstractBuild<?, ?> build,
+            final Launcher launcher, final FilePath workspace,
+            final BuildListener listener, final File changelogFile)
+            throws IOException, InterruptedException {
+        if (clearWorkspace) {
             workspace.deleteContents();
         }
 
-        URLDateAction dates = new URLDateAction(build);
+        final URLDateAction dates = new URLDateAction(build);
 
-        for(URLTuple tuple : urls) {
-            String urlString = tuple.getUrl();
+        for (final URLTuple tuple : urls) {
+            final String urlString = tuple.getUrl();
             InputStream is = null;
             OutputStream os = null;
             try {
-                URL url = new URL(urlString);
-                URLConnection conn = url.openConnection();
+                final URL url = new URL(urlString);
+                final URLConnection conn = url.openConnection();
                 conn.setUseCaches(false);
                 dates.setLastModified(urlString, conn.getLastModified());
                 is = conn.getInputStream();
-                String path = new File(url.getPath()).getName();
-                listener.getLogger().append("Copying " + urlString + " to " + path + "\n");
+                final String path = new File(url.getPath()).getName();
+                listener.getLogger().append(
+                        "Copying " + urlString + " to " + path + "\n");
                 os = workspace.child(path).write();
-                byte[] buf = new byte[8192];
+                final byte[] buf = new byte[8192];
                 int i = 0;
                 while ((i = is.read(buf)) != -1) {
                     os.write(buf, 0, i);
                 }
-            } 
-            catch (Exception e) {
-                listener.error("Unable to copy " + urlString + "\n" + e.getMessage());
+            }
+            catch (final Exception e) {
+                listener.error("Unable to copy " + urlString + "\n"
+                        + e.getMessage());
                 return false;
             }
             finally {
-                if (is != null) is.close();
-                if (os != null) os.close();
+                if (is != null) {
+                    is.close();
+                }
+                if (os != null) {
+                    os.close();
+                }
             }
-            this.createEmptyChangeLog(changelogFile, listener, "log");
+            createEmptyChangeLog(changelogFile, listener, "log");
         }
         build.addAction(dates);
 
@@ -107,41 +118,50 @@ public class URLSCM extends hudson.scm.SCM {
     }
 
     @Override
-    public boolean pollChanges(AbstractProject project, Launcher launcher,
-            FilePath workspace, TaskListener listener) throws IOException,
+    public boolean pollChanges(final AbstractProject project,
+            final Launcher launcher, final FilePath workspace,
+            final TaskListener listener) throws IOException,
             InterruptedException {
         boolean change = false;
-        Run lastBuild = project.getLastBuild();
-        if(lastBuild == null) return true;
-        URLDateAction dates = lastBuild.getAction(URLDateAction.class);
-        if(dates == null) return true;
+        final Run lastBuild = project.getLastBuild();
+        if (lastBuild == null) {
+            return true;
+        }
+        final URLDateAction dates = lastBuild.getAction(URLDateAction.class);
+        if (dates == null) {
+            return true;
+        }
 
-        for(URLTuple tuple : urls) {
-            String urlString = tuple.getUrl();
+        for (final URLTuple tuple : urls) {
+            final String urlString = tuple.getUrl();
             try {
-                URL url = new URL(urlString);
-                URLConnection conn = url.openConnection();
+                final URL url = new URL(urlString);
+                final URLConnection conn = url.openConnection();
                 conn.setUseCaches(false);
 
-                long lastMod = conn.getLastModified();
-                long lastBuildMod = dates.getLastModified(urlString);
-                if(lastBuildMod != lastMod) {
+                final long lastMod = conn.getLastModified();
+                final long lastBuildMod = dates.getLastModified(urlString);
+                if (lastBuildMod != lastMod) {
                     listener.getLogger().println(
-                            "Found change: " + urlString + " modified " + new Date(lastMod) + 
-                            " previous modification was " + new Date(lastBuildMod));
+                            "Found change: " + urlString + " modified "
+                                    + new Date(lastMod)
+                                    + " previous modification was "
+                                    + new Date(lastBuildMod));
                     change = true;
                 }
-            } 
-            catch (Exception e) {
-                listener.error("Unable to check " + urlString + "\n" + e.getMessage());
-            } 
+            }
+            catch (final Exception e) {
+                listener.error("Unable to check " + urlString + "\n"
+                        + e.getMessage());
+            }
         }
         return change;
     }
 
     public static final class URLTuple {
-        private String urlString;
-        public URLTuple(String s) {
+        private final String urlString;
+
+        public URLTuple(final String s) {
             urlString = s;
         }
 
@@ -158,37 +178,46 @@ public class URLSCM extends hudson.scm.SCM {
             load();
         }
 
+        @Override
         public String getDisplayName() {
             return "URL Copy";
         }
 
         @Override
-        public SCM newInstance(StaplerRequest req, JSONObject formData) throws FormException {
-            return new URLSCM(req.getParameterValues("URL.url"), req.getParameter("URL.clear") != null);
+        public SCM newInstance(final StaplerRequest req,
+                final JSONObject formData) throws FormException {
+            return new URLSCM(req.getParameterValues("URL.url"),
+                    req.getParameter("URL.clear") != null);
         }
 
         @Override
-        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+        public boolean configure(final StaplerRequest req,
+                final JSONObject formData) throws FormException {
             return true;
         }
 
         public FormValidation doUrlCheck(@QueryParameter final String value)
-        throws IOException, ServletException {
-            if (!Hudson.getInstance().hasPermission(Hudson.ADMINISTER)) return FormValidation.ok();
+                throws IOException, ServletException {
+            if (!Hudson.getInstance().hasPermission(Hudson.ADMINISTER)) {
+                return FormValidation.ok();
+            }
             return new FormValidation.URLCheck() {
                 @Override
-                protected FormValidation check() throws IOException, ServletException {
-                    String url = fixEmpty(value);
+                protected FormValidation check() throws IOException,
+                        ServletException {
+                    final String url = fixEmpty(value);
                     URL u = null;
                     try {
                         u = new URL(url);
                         open(u);
-                    } catch (Exception e) {
+                    }
+                    catch (final Exception e) {
                         return FormValidation.error("Cannot open " + url);
                     }
-                    String path = new File(u.getPath()).getName();
-                    if(path.length() == 0) {
-                        return FormValidation.error("URL does not contain filename: " + url);
+                    final String path = new File(u.getPath()).getName();
+                    if (path.length() == 0) {
+                        return FormValidation
+                                .error("URL does not contain filename: " + url);
                     }
                     return FormValidation.ok();
                 }
@@ -196,4 +225,19 @@ public class URLSCM extends hudson.scm.SCM {
         }
     }
 
+    @Override
+    public SCMRevisionState calcRevisionsFromBuild(
+            final AbstractBuild<?, ?> arg0, final Launcher arg1,
+            final TaskListener arg2) throws IOException, InterruptedException {
+        return null;
+    }
+
+    @Override
+    protected PollingResult compareRemoteRevisionWith(
+            final AbstractProject<?, ?> arg0, final Launcher arg1,
+            final FilePath arg2, final TaskListener arg3,
+            final SCMRevisionState arg4) throws IOException,
+            InterruptedException {
+        return PollingResult.BUILD_NOW;
+    }
 }
