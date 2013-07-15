@@ -26,6 +26,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 
@@ -63,10 +65,12 @@ public class URLSCM extends hudson.scm.SCM {
             workspace.deleteContents();
         }
 
+        Map<String, String> buildParameters = build.getBuildVariables();
+
         final URLDateAction dates = new URLDateAction(build);
 
         for (final URLTuple tuple : urls) {
-            final String urlString = tuple.getUrl();
+            final String urlString = expandUrl(tuple, buildParameters);
             InputStream is = null;
             OutputStream os = null;
             try {
@@ -103,6 +107,11 @@ public class URLSCM extends hudson.scm.SCM {
         build.addAction(dates);
 
         return true;
+    }
+
+    private static String expandUrl(final URLTuple urlTuple, final Map<String, String> buildParameters) {
+        final String rawUrl = urlTuple.getUrl();
+        return URLParameter.substituteAll(rawUrl, buildParameters);
     }
 
     @Override
@@ -201,11 +210,19 @@ public class URLSCM extends hudson.scm.SCM {
             if (!Hudson.getInstance().hasPermission(Hudson.ADMINISTER)) {
                 return FormValidation.ok();
             }
+
             return new FormValidation.URLCheck() {
                 @Override
                 protected FormValidation check() throws IOException,
                         ServletException {
                     final String url = fixEmpty(value);
+
+                    //parameters cannot be validated here, so allow
+                    Set<URLParameter> parameters = URLParameter.getParameters(url);
+                    if(! parameters.isEmpty()) {
+                        return FormValidation.ok("URL contains parameters");
+                    }
+
                     URL u = null;
                     try {
                         u = new URL(url);
