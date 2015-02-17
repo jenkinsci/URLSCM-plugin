@@ -1,8 +1,7 @@
 package hudson.plugins.URLSCM;
 
-import hudson.model.Action;
 import hudson.model.AbstractBuild;
-import hudson.model.AbstractModelObject;
+import hudson.scm.SCMRevisionState;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -15,21 +14,18 @@ import javax.servlet.ServletException;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
-public class URLDateAction extends AbstractModelObject implements Action {
-    /**
-     * 
-     */
-    private static final long           serialVersionUID = 1L;
+public class URLDateAction extends SCMRevisionState {
+    private static final long serialVersionUID = 1L;
 
-    private final HashMap<String, Long> lastModified     = new HashMap<String, Long>();
+    private final HashMap<String, Long> lastModified = new HashMap<String, Long>();
 
-    private final AbstractBuild         build;
+    private final AbstractBuild<?, ?> build;
 
-    protected URLDateAction(final AbstractBuild build) {
+    protected URLDateAction(final AbstractBuild<?, ?> build) {
         this.build = build;
     }
 
-    public AbstractBuild getBuild() {
+    public AbstractBuild<?, ?> getBuild() {
         return build;
     }
 
@@ -60,10 +56,12 @@ public class URLDateAction extends AbstractModelObject implements Action {
         return ret;
     }
 
+    @Override
     public String getDisplayName() {
         return "URL Modification Dates";
     }
 
+    @Override
     public String getIconFileName() {
         return "save.gif";
     }
@@ -72,6 +70,7 @@ public class URLDateAction extends AbstractModelObject implements Action {
         return getUrlName();
     }
 
+    @Override
     public String getUrlName() {
         return "urlDates";
     }
