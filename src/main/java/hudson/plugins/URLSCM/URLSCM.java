@@ -9,7 +9,6 @@ import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Hudson;
-import hudson.model.Run;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.NullChangeLogParser;
 import hudson.scm.PollingResult;
@@ -118,20 +117,26 @@ public class URLSCM extends hudson.scm.SCM {
     }
 
     @Override
-    public boolean pollChanges(final AbstractProject project,
-            final Launcher launcher, final FilePath workspace,
-            final TaskListener listener) throws IOException,
+    public SCMRevisionState calcRevisionsFromBuild(
+            final AbstractBuild<?, ?> project, final Launcher launcher,
+            final TaskListener listener) throws IOException, InterruptedException {
+        return null;
+    }
+
+    @Override
+    protected PollingResult compareRemoteRevisionWith(
+            final AbstractProject<?, ?> project, final Launcher launcher,
+            final FilePath workspace, final TaskListener listener,
+            final SCMRevisionState state) throws IOException,
             InterruptedException {
         boolean change = false;
-        final Run lastBuild = project.getLastBuild();
-        if (lastBuild == null) {
-            return true;
-        }
-        final URLDateAction dates = lastBuild.getAction(URLDateAction.class);
-        if (dates == null) {
-            return true;
+
+        if (state == null || !(state instanceof URLDateAction)) {
+        	listener.getLogger().println("Changes not yet tracked with last build, triggering a new one");        	
+            return PollingResult.BUILD_NOW;
         }
 
+        final URLDateAction dates = (URLDateAction) state;
         for (final URLTuple tuple : urls) {
             final String urlString = tuple.getUrl();
             try {
@@ -155,9 +160,9 @@ public class URLSCM extends hudson.scm.SCM {
                         + e.getMessage());
             }
         }
-        return change;
+        return change ? PollingResult.BUILD_NOW : PollingResult.NO_CHANGES;
     }
-
+    
     public static final class URLTuple {
         private final String urlString;
 
@@ -225,19 +230,4 @@ public class URLSCM extends hudson.scm.SCM {
         }
     }
 
-    @Override
-    public SCMRevisionState calcRevisionsFromBuild(
-            final AbstractBuild<?, ?> arg0, final Launcher arg1,
-            final TaskListener arg2) throws IOException, InterruptedException {
-        return null;
-    }
-
-    @Override
-    protected PollingResult compareRemoteRevisionWith(
-            final AbstractProject<?, ?> arg0, final Launcher arg1,
-            final FilePath arg2, final TaskListener arg3,
-            final SCMRevisionState arg4) throws IOException,
-            InterruptedException {
-        return PollingResult.BUILD_NOW;
-    }
 }
